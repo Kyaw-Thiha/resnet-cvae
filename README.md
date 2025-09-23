@@ -24,7 +24,7 @@ python main.py fit --config config/train.yaml --run_batch_size_finder true --bat
 
 ### 🔧 Best learning rate finder
 ```bash
-python main.py fit --config config/train.yaml --run_lr_finder true --show_lr_plot true
+python main.py fit --config config/train.yaml --run_lr_finder true 
 ```
 
 ## Running the Model
