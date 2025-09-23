@@ -1,7 +1,7 @@
 # ResNet-based CVAE
 This is an implementation of custom `ResNet-based CVAE` to generate synthetic images.
 
-## Running the Code
+## Training the Model
 ### 🔧 Training
 ```bash
 python main.py fit --config config/train.yaml
@@ -9,7 +9,7 @@ python main.py fit --config config/train.yaml
 
 ### 🔧 Training from a checkpoint
 ```bash
-python main.py fit --config config/train.yaml --ckpt_path checkpoint/hsdt-epoch10.ckpt
+python main.py fit --config config/train.yaml --ckpt_path runs/train_/checkpoints/interval/hsdt-epoch10.ckpt
 ```
 
 ### 🔧 Smoke Test
@@ -27,7 +27,7 @@ python main.py fit --config config/train.yaml --run_batch_size_finder true --bat
 python main.py fit --config config/train.yaml --run_lr_finder true --show_lr_plot true
 ```
 
-
+## Running the Model
 ### ✅ Validation
 ```bash
 python main.py validate --config config/train.yaml
@@ -49,6 +49,12 @@ python main.py --help
 ```
 Note that all the individual commands also have `--help`
 
+## Log Analysis
+```bash
+tensorboard --logdir runs
+```
+
+## Architecture
 ```d
 Input x ∈ R^{B×1×28×28}                                  Class label c ∈ {0..9}
         │                                                          │
