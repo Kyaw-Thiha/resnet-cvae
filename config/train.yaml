@@ -38,6 +38,7 @@ data:
 # Trainer configuration
 # ----------------------------
 trainer:
+  default_root_dir: ${oc.env:RUN_DIR}
   accelerator: auto
   devices: auto
   max_epochs: 50
@@ -48,29 +49,44 @@ trainer:
   enable_checkpointing: true
   default_root_dir: ./runs
 
-# ----------------------------
-# Callbacks
-# ----------------------------
-callbacks:
-  - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+  # ----------------------------
+  # Logger (TensorBoard)
+  # ----------------------------
+  logger:
+    class_path: lightning.pytorch.loggers.TensorBoardLogger
     init_args:
-      monitor: val/loss
-      mode: min
-      save_last: true
-      save_top_k: 1
-      filename: "epoch={epoch}-valloss={val/loss:.4f}"
-  - class_path: lightning.pytorch.callbacks.LearningRateMonitor
-    init_args:
-      logging_interval: epoch
-  - class_path: callbacks.sample_images.SampleImages
-    init_args: { num_per_class: 8 }
+      save_dir: ${oc.env:RUN_DIR}
+      name: logs
+      default_hp_metric: false
 
-# ----------------------------
-# Logger (TensorBoard)
-# ----------------------------
-logger:
-  class_path: lightning.pytorch.loggers.TensorBoardLogger
-  init_args:
-    save_dir: ./runs
-    name: cvae_mnist
-    default_hp_metric: false
+  # ----------------------------
+  # Callbacks
+  # ----------------------------
+  callbacks:
+    # Save the best checkpoint
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        monitor: val/loss
+        mode: min
+        save_last: true
+        save_top_k: 1
+        dirpath: "${oc.env:RUN_DIR}/checkpoints/best/"
+        filename: "epoch={epoch}-loss={val/loss:.4f}"
+    # Save every 5 epochs (regardless of score)
+    - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+      init_args:
+        every_n_epochs: 5
+        save_top_k: -1
+        dirpath: "${oc.env:RUN_DIR}/checkpoints/interval/"
+        filename: "epoch-{epoch}"
+        save_last: false
+
+    # Log learning rate every epoch
+    - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+      init_args:
+        logging_interval: epoch
+
+    # Output 8 sample images every epoch in validation
+    - class_path: callbacks.sample_images.SampleImages
+      init_args: { num_per_class: 8 }
+
