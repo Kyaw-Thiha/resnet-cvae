@@ -1,6 +1,54 @@
 # ResNet-based CVAE
 This is an implementation of custom `ResNet-based CVAE` to generate synthetic images.
 
+## Running the Code
+### 🔧 Training
+```bash
+python main.py fit --config config/train.yaml
+```
+
+### 🔧 Training from a checkpoint
+```bash
+python main.py fit --config config/train.yaml --ckpt_path checkpoint/hsdt-epoch10.ckpt
+```
+
+### 🔧 Smoke Test
+```bash
+python main.py fit --config config/train_local.yaml --trainer.profiler=null --trainer.fast_dev_run=True
+```
+
+### 🔧 Best batch finder
+```bash
+python main.py fit --config config/train.yaml --run_batch_size_finder true --batch_size_finder_mode power
+```
+
+### 🔧 Best learning rate finder
+```bash
+python main.py fit --config config/train.yaml --run_lr_finder true --show_lr_plot true
+```
+
+
+### ✅ Validation
+```bash
+python main.py validate --config config/train.yaml
+```
+
+### 🧪 Testing
+```bash
+python main.py test --config config/train.yaml
+```
+
+### 🔮 Predict
+```bash
+python main.py predict --config config/train.yaml
+```
+
+### 🆘 For help text
+```bash
+python main.py --help
+```
+Note that all the individual commands also have `--help`
+
 ```d
 Input x ∈ R^{B×1×28×28}                                  Class label c ∈ {0..9}
         │                                                          │
