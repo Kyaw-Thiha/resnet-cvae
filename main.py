@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from typing import Any
+import datetime
+import pathlib
+
 import torch
 from lightning.pytorch.cli import LightningCLI
 from lightning.pytorch.tuner.tuning import Tuner
@@ -8,6 +11,25 @@ from matplotlib.figure import Figure
 
 from model import CVAELightning
 from data_module import MNISTDataModule
+
+
+def make_run_dir(mode: str, base: str = "runs") -> str:
+    """
+    Create a unique run directory like:
+      runs/train_15_08_2025_19_30
+
+    Args:
+        mode: "train" | "valid" | "test" | etc.
+        base: parent directory under which runs are saved.
+
+    Returns:
+        Absolute string path to the run directory.
+    """
+    ts = datetime.datetime.now().strftime("%d_%m_%Y_%H_%M")
+    run_name = f"{mode}_{ts}"
+    run_dir = pathlib.Path(base) / run_name
+    run_dir.mkdir(parents=True, exist_ok=False)
+    return str(run_dir)
 
 
 class CVAECLI(LightningCLI):
@@ -25,6 +47,12 @@ class CVAECLI(LightningCLI):
         # Learning Rate Finder
         parser.add_argument("--run_lr_finder", type=bool, default=False, help="Whether to run learning rate finder")
         parser.add_argument("--show_lr_plot", type=bool, default=True, help="Whether to plot learning rate finder")
+
+    def before_instantiate_classes(self) -> None:
+        # pick the "mode" based on the subcommand (fit/validate/test/predict)
+        subcmd = self.subcommand or "train"
+        run_dir = make_run_dir(subcmd, base="runs")
+        os.environ["RUN_DIR"] = run_dir  # available in YAML config via ${oc.env:RUN_DIR}
 
     def before_fit(self):
         tuner = Tuner(self.trainer)
