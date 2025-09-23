@@ -11,7 +11,7 @@ from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 
-from model.resblocks import ResBlockDown
+from resnet_cvae.resblocks import ResBlockDown
 
 
 class Encoder(nn.Module):

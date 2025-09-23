@@ -8,7 +8,7 @@ from typing import Optional
 
 from torch import Tensor
 import torch.nn as nn
-from model.film import FiLM
+from resnet_cvae.film import FiLM
 
 
 class ResBlockDown(nn.Module):
