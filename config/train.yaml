@@ -1,0 +1,76 @@
+# Seed everything (LightningCLI handles this when set here)
+seed_everything: 42
+
+# ----------------------------
+# Model hyperparameters
+# ----------------------------
+model:
+  in_channels: 1            # set to 3 for RGB datasets later
+  out_channels: 1
+  z_dim: 16
+  num_classes: 10
+  cond_dim: 16
+  use_film: false
+  sigma: 0.1
+
+  # Optimization + loss schedule
+  lr: 0.002
+  weight_decay: 0.0001
+  beta: 1.0                 # final KL weight
+  kl_warmup_epochs: 10      # linear warmup from 0 -> beta
+  max_epochs: 50            # (used by the cosine LR helper)
+
+# ----------------------------
+# Data settings
+# ----------------------------
+data:
+  data_dir: ./data
+  batch_size: 128
+  num_workers: 8
+  val_split: 5000
+  image_channels: 1         # keep in sync with model.{in,out}_channels
+  num_classes: 10
+  predict_samples_per_class: 8
+  pin_memory: true
+  persistent_workers: true
+
+# ----------------------------
+# Trainer configuration
+# ----------------------------
+trainer:
+  accelerator: auto
+  devices: auto
+  max_epochs: 50
+  precision: 32-true
+  log_every_n_steps: 50
+  gradient_clip_val: 1.0
+  deterministic: false
+  enable_checkpointing: true
+  default_root_dir: ./runs
+
+# ----------------------------
+# Callbacks
+# ----------------------------
+callbacks:
+  - class_path: lightning.pytorch.callbacks.ModelCheckpoint
+    init_args:
+      monitor: val/loss
+      mode: min
+      save_last: true
+      save_top_k: 1
+      filename: "epoch={epoch}-valloss={val/loss:.4f}"
+  - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+    init_args:
+      logging_interval: epoch
+  - class_path: callbacks.sample_images.SampleImages
+    init_args: { num_per_class: 8 }
+
+# ----------------------------
+# Logger (TensorBoard)
+# ----------------------------
+logger:
+  class_path: lightning.pytorch.loggers.TensorBoardLogger
+  init_args:
+    save_dir: ./runs
+    name: cvae_mnist
+    default_hp_metric: false
