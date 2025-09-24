@@ -10,7 +10,8 @@ from lightning.pytorch.tuner.tuning import Tuner
 from model import CVAELightning
 from data_module import MNISTDataModule
 
-from utils.no_side_effects import no_side_effects
+from utils.batch_size_finder import run_bs_finder_ephemeral
+from utils.learning_rate_finder import run_lr_finder_ephemeral
 from utils.make_run_dir import make_run_dir
 
 
@@ -56,8 +57,9 @@ class CVAECLI(LightningCLI):
                 mode = self.config.fit.batch_size_finder_mode
                 print(f"\n📦 Running batch size finder (mode: {mode})...")
 
-                with no_side_effects(self.trainer):
-                    new_batch_size = tuner.scale_batch_size(self.model, datamodule=self.datamodule, mode=mode)
+                # with no_side_effects(self.trainer):
+                #     new_batch_size = tuner.scale_batch_size(self.model, datamodule=self.datamodule, mode=mode)
+                new_batch_size = run_bs_finder_ephemeral(self.trainer, self.model, self.datamodule)
 
                 print(f"✅ Suggested batch size: {new_batch_size}")
 
@@ -76,14 +78,14 @@ class CVAECLI(LightningCLI):
             if self.trainer.fast_dev_run:  # pyright: ignore
                 print("🚫 Skipping LR finder due to fast_dev_run")
             else:
-                with no_side_effects(self.trainer):
-                    lr_finder = tuner.lr_find(self.model, datamodule=self.datamodule)
+                # lr_finder = tuner.lr_find(self.model, datamodule=self.datamodule)
+                lr_finder = run_lr_finder_ephemeral(self.trainer, self.model, self.datamodule)
 
-                    if lr_finder is not None:
-                        suggested_lr = lr_finder.suggestion()
-                        print(f"\n🔎 Suggested Learning Rate: {suggested_lr:.2e}")
-                    else:
-                        print("⚠️ Could not find optimal learning rate")
+                if lr_finder is not None:
+                    suggested_lr = lr_finder.suggestion()
+                    print(f"\n🔎 Suggested Learning Rate: {suggested_lr:.2e}")
+                else:
+                    print("⚠️ Could not find optimal learning rate")
             raise SystemExit(0)
 
     def before_instantiate_classes(self) -> None:
