@@ -38,7 +38,7 @@ data:
 # Trainer configuration
 # ----------------------------
 trainer:
-  default_root_dir: ${oc.env:RUN_DIR}
+  default_root_dir: runs
   accelerator: auto
   devices: auto
   max_epochs: 50
@@ -55,7 +55,7 @@ trainer:
   logger:
     class_path: lightning.pytorch.loggers.TensorBoardLogger
     init_args:
-      save_dir: ${oc.env:RUN_DIR}
+      save_dir: ${trainer.default_root_dir}
       name: logs
       default_hp_metric: false
 
@@ -70,14 +70,14 @@ trainer:
         mode: min
         save_last: true
         save_top_k: 1
-        dirpath: "${oc.env:RUN_DIR}/checkpoints/best/"
+        dirpath: ${trainer.default_root_dir}/checkpoints/best/
         filename: "epoch={epoch}-loss={val/loss:.4f}"
     # Save every 5 epochs (regardless of score)
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         every_n_epochs: 5
         save_top_k: -1
-        dirpath: "${oc.env:RUN_DIR}/checkpoints/interval/"
+        dirpath: ${trainer.default_root_dir}/checkpoints/interval/
         filename: "epoch-{epoch}"
         save_last: false
 
@@ -88,5 +88,6 @@ trainer:
 
     # Output 8 sample images every epoch in validation
     - class_path: callbacks.sample_images.SampleImages
-      init_args: { num_per_class: 8 }
+      init_args: 
+        num_per_class: 8 
 

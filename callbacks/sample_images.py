@@ -28,9 +28,7 @@ class SampleImages(Callback):
         self.num_per_class = num_per_class
 
     @torch.no_grad()
-    def on_validation_epoch_end(
-        self, trainer: Trainer, pl_module: LightningModule
-    ) -> None:
+    def on_validation_epoch_end(self, trainer: Trainer, pl_module: LightningModule) -> None:
         """
         Called by Lightning after each validation epoch. If a logger is present and the
         `pl_module` exposes the required API (`num_classes` and `sample`), generates a grid of
@@ -51,15 +49,11 @@ class SampleImages(Callback):
             return
 
         device = pl_module.device
-        labels = torch.arange(int(num_classes), device=device).repeat_interleave(
-            self.num_per_class
-        )
+        labels = torch.arange(int(num_classes), device=device).repeat_interleave(self.num_per_class)
         imgs: Tensor = sample_fn(n=labels.numel(), y=labels, device=device)  # (N,C,H,W)
         imgs = (imgs.clamp(-1, 1) + 1.0) / 2.0  # [-1,1] -> [0,1]
 
         grid = make_grid(imgs, nrow=self.num_per_class)
-        out_path = (
-            f"{trainer.default_root_dir}/samples/epoch_{trainer.current_epoch:04d}.png"
-        )
+        out_path = f"{trainer.default_root_dir}/samples/epoch_{trainer.current_epoch}.png"
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         save_image(grid, out_path)
