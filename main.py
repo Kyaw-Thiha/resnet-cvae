@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, cast
-from types import SimpleNamespace
+from typing import Any
 
 import torch
 from lightning.pytorch.cli import LightningCLI
@@ -10,7 +9,6 @@ from lightning.pytorch.tuner.tuning import Tuner
 from model import CVAELightning
 from data_module import MNISTDataModule
 
-from utils.make_run_dir import make_run_dir
 from utils.no_side_effects import no_side_effects
 
 
@@ -28,26 +26,6 @@ class CVAECLI(LightningCLI):
         )
         # Learning Rate Finder
         parser.add_argument("--run_lr_finder", type=bool, default=False, help="Whether to run learning rate finder")
-
-    # ----------------------------------
-    # Custom Output Folder
-    # ----------------------------------
-    def before_instantiate_classes(self) -> None:
-        # pick the "mode" based on the subcommand (fit/validate/test/predict)
-        subcmd = self.subcommand or "train"
-        run_dir = make_run_dir(subcmd, base="runs")
-
-        # Descend into the subcommand namespace if present (fit/validate/test/predict)
-        ns = self.config
-        if hasattr(ns, subcmd):  # e.g., self.config.fit
-            ns = getattr(ns, subcmd)
-
-        # Ensure there is a trainer namespace
-        if not hasattr(ns, "trainer") or getattr(ns, "trainer") is None:
-            setattr(ns, "trainer", SimpleNamespace())
-
-        # Set default_root_dir for this run
-        cast(Any, ns.trainer).default_root_dir = run_dir
 
     def before_fit(self):
         tuner = Tuner(self.trainer)

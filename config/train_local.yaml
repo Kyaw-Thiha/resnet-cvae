@@ -55,7 +55,7 @@ trainer:
   logger:
     class_path: lightning.pytorch.loggers.TensorBoardLogger
     init_args:
-      save_dir: ${trainer.default_root_dir}
+      save_dir: runs    # Placeholder: will be set automatically to <run_dir>/logs [callbacks/run_dir_bootstrap.py]
       name: logs
       default_hp_metric: false
 
@@ -63,6 +63,11 @@ trainer:
   # Callbacks
   # ----------------------------
   callbacks:
+    # Update the output directories
+    - class_path: callbacks.run_dir_bootstrap.RunDirBootstrap
+      init_args: 
+        base_path: runs 
+
     # Save the best checkpoint
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
@@ -70,14 +75,14 @@ trainer:
         mode: min
         save_last: true
         save_top_k: 1
-        dirpath: ${trainer.default_root_dir}/checkpoints/best/
+        dirpath: runs    # Placeholder: will be set automatically to <run_dir>/checkpoints/best [callbacks/run_dir_bootstrap.py]
         filename: "epoch={epoch}-loss={val/loss:.4f}"
     # Save every 5 epochs (regardless of score)
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
         every_n_epochs: 5
         save_top_k: -1
-        dirpath: ${trainer.default_root_dir}/checkpoints/interval/
+        dirpath: runs    # Placeholder: will be set automatically to <run_dir>/checkpoints/interval [callbacks/run_dir_bootstrap.py]
         filename: "epoch-{epoch}"
         save_last: false
 
