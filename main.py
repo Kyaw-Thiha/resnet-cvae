@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import torch
@@ -10,6 +11,17 @@ from model import CVAELightning
 from data_module import MNISTDataModule
 
 from utils.no_side_effects import no_side_effects
+from utils.make_run_dir import make_run_dir
+
+
+def _active_group(cfg) -> Any:
+    """
+    Return the dict-like node for the active subcommand (fit/test/validate/predict)
+    """
+    for k in ("fit", "test", "validate", "predict"):
+        if k in cfg:
+            return getattr(cfg, k)
+    return cfg  # if subcommands=False
 
 
 class CVAECLI(LightningCLI):
@@ -73,6 +85,49 @@ class CVAECLI(LightningCLI):
                     else:
                         print("⚠️ Could not find optimal learning rate")
             raise SystemExit(0)
+
+    def before_instantiate_classes(self) -> None:
+        cfg = self.config
+        run_dir = make_run_dir("fit", base=cfg.get("run", {}).get("base_dir", "runs"))
+        root = _active_group(cfg)
+
+        trainer_dict = getattr(root, "trainer", {}) or {}
+        trainer_dict["default_root_dir"] = run_dir
+        trainer_dict["logger"] = {
+            "class_path": "lightning.pytorch.loggers.tensorboard.TensorBoardLogger",
+            "init_args": {"save_dir": run_dir, "name": "logs", "default_hp_metric": False},
+        }
+        trainer_dict["callbacks"] = [
+            {
+                "class_path": "lightning.pytorch.callbacks.ModelCheckpoint",
+                "init_args": {
+                    "dirpath": os.path.join(run_dir, "checkpoints", "best"),
+                    "filename": "e_{epoch+1}-l_{val/loss:.4f}",
+                    "monitor": "val/loss",
+                    "mode": "min",
+                    "save_top_k": 1,
+                },
+            },
+            {
+                "class_path": "lightning.pytorch.callbacks.ModelCheckpoint",
+                "init_args": {
+                    "dirpath": os.path.join(run_dir, "checkpoints", "interval"),
+                    "filename": "e_{epoch+1}",
+                    "every_n_epochs": 5,
+                    "save_top_k": -1,
+                    "save_last": False,
+                },
+            },
+            {
+                "class_path": "lightning.pytorch.callbacks.LearningRateMonitor",
+                "init_args": {"logging_interval": "epoch"},
+            },
+            {
+                "class_path": "callbacks.sample_images.SampleImages",
+                "init_args": {"num_per_class": 8},  # ✅ singular
+            },
+        ]
+        root.trainer = trainer_dict
 
 
 def cli_main() -> None:
