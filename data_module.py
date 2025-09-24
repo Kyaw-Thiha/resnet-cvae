@@ -13,8 +13,21 @@ from typing import Any, Dict
 
 class MNISTDataModule(LightningDataModule):
     """
-    Lightning DataModule for MNIST with train/val/test splits and an optional
-    predict loader that yields labels for class-conditional generation.
+    DataModule for MNIST with train/val/test splits and an optional predict path.
+
+    Predict-time controls (optional):
+        temperature: Optional[float]
+            Latent prior std scale for sampling (truncation/diversity).
+        guidance_scale: Optional[float]
+            CFG-style guidance scale (0 disables).
+        cond_scale: Optional[float]
+            Label-conditioning strength multiplier.
+        seed: Optional[int]
+            RNG seed for reproducible z when not provided explicitly.
+
+    Notes:
+        • These fields are ignored during fit/validate/test.
+        • If unset (None), they are omitted from predict batches and model defaults apply.
     """
 
     def __init__(
@@ -116,6 +129,19 @@ class MNISTDataModule(LightningDataModule):
         )
 
     def predict_dataloader(self) -> DataLoader:
+        """
+        Builds a dataloader that yields dictionaries consumed by `predict_step`.
+
+        Each item is a dict with:
+          - "y": label for the sample
+          - Optional controls (only included if provided on the DataModule):
+              "temperature", "guidance_scale", "cond_scale", "seed"
+
+        Rationale:
+            Keeping these fields Optional avoids leaking prediction-only flags into
+            training/validation loops and preserves clean configurations.
+        """
+
         assert self._predict is not None
 
         class _GenWrapper(Dataset):  # type: ignore[misc]

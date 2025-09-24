@@ -83,13 +83,23 @@ class ResNetCVAE(nn.Module):
         return total, recon, kl
 
     def decode(self, z: Tensor, y: Tensor, cond_scale: float = 1.0) -> Tensor:
-        """Decode given latent z under label y. cond_scale scales label embedding strength.
+        """
+        Decode a latent code under a class label with adjustable conditioning strength.
+
         Args:
-        z: (B, z_dim)
-        y: (B,) ints or (B,num_classes) one-hot
-        cond_scale: multiply class embedding by this factor (1.0 = normal)
+            z: (B, z_dim)
+                Latent vectors to decode.
+            y: (B,) (int labels) or (B, num_classes) (one-hot)
+                Class labels or one-hot encodings that condition the decoder.
+            cond_scale: float, default=1.0
+                Multiplier on the class embedding before decoding.
+                - 0.0  → “unconditional” path (no label influence)
+                - 1.0  → normal conditioning
+                - >1.0 → emphasize class features
+
         Returns:
-        x_hat: (B, out_ch, H, W)
+            x_hat: (B, out_ch, H, W)
+                Decoder mean image (for Gaussian likelihood).
         """
         if y.dim() == 1:
             num_classes: int = self.encoder.num_classes
@@ -118,6 +128,19 @@ class ResNetCVAE(nn.Module):
             n:      number of samples
             y:      (n,) int labels OR (n, num_classes) one-hot
             device: device override (defaults to model device)
+            temperature: float, default=1.0
+                Scales the latent prior std:
+                - <1.0  → truncation (cleaner, less diverse)
+                - =1.0  → standard prior
+                - >1.0  → more diversity/variation
+            seed: RNG seed for reproducible latent sampling (ignored if `z` is provided).
+            z: Optional[Tensor], shape (n, z_dim)
+                Custom latent codes to decode instead of random sampling.
+            guidance_scale: float, default=0.0
+                Classifier-free guidance strength in output space:
+                `x = x_cond + s * (x_cond - x_uncond)`. Set 0.0 to disable.
+            cond_scale: float, default=1.0
+                Multiplier for label-conditioning strength (passed to `decode`).
         Returns:
             x_hat:  (n, out_ch, 28, 28)
 

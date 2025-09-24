@@ -142,13 +142,24 @@ class CVAELightning(LightningModule):
         Expects a batch of integer labels (B,) or one-hots (B, num_classes).
         Returns generated images in [-inf, +inf] (means of Gaussian). You can post-process outside.
 
-        Accepts either a Tensor of labels OR a dict with generation controls:
-        y: (B,) or (B,num_classes)
-        z: (B,z_dim) optional
-        temperature: float
-        guidance_scale: float
-        cond_scale: float
-        seed: int (optional)
+        Prediction entrypoint with controllable generation.
+
+        Supports two batch formats:
+        1) Tensor: interpreted as labels `y` of shape (B,)
+        2) Dict: keys may include:
+            - "y": (B,) labels or (B, num_classes) one-hot  [REQUIRED]
+            - "z": (B, z_dim) custom latent codes           [OPTIONAL]
+            - "temperature": float                          [OPTIONAL] default 1.0
+            - "guidance_scale": float                       [OPTIONAL] default 0.0
+            - "cond_scale": float                           [OPTIONAL] default 1.0
+            - "seed": int                                   [OPTIONAL]
+
+        Notes:
+            • If any optional keys are missing, sensible defaults are used.
+            • Output are decoder means (Gaussian), suitable to rescale from [-1,1] to [0,1].
+
+        Returns:
+            (B, out_ch, H, W) tensor of generated images.
         """
         temperature: float = 1.0
         guidance_scale: float = 0.0
@@ -198,7 +209,26 @@ class CVAELightning(LightningModule):
     ) -> Tensor:
         """
         Thin, typed pass-through to the underlying model's controllable sampler.
-        Backward compatible: callback can keep calling sample(n, y, device).
+        Args:
+            n: int
+                Number of images to sample.
+            y: (n,) labels or (n, num_classes) one-hot
+                Class labels for conditioning.
+            device: Optional[torch.device]
+                Device override; defaults to module device.
+            temperature: float, default=1.0
+                Latent prior std scale (truncation/diversity control).
+            seed: Optional[int]
+                RNG seed for reproducible sampling (ignored if `z` provided).
+            z: Optional[Tensor]
+                Custom latents of shape (n, z_dim).
+            guidance_scale: float, default=0.0
+                CFG-style guidance blend factor.
+            cond_scale: float, default=1.0
+                Label-conditioning strength multiplier.
+
+        Returns:
+            (n, out_ch, H, W) tensor of generated images (decoder means).
         """
         dev = self.device if device is None else device
         return self.model.sample(
