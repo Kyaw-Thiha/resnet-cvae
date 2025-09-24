@@ -30,15 +30,9 @@ class Decoder(nn.Module):
         self.cond_dim: int = cond_dim
 
         self.fc: nn.Linear = nn.Linear(z_dim + cond_dim, 7 * 7 * 64)
-        self.block1: ResBlockUp = ResBlockUp(
-            64, 64, use_film=use_film, cond_dim=cond_dim
-        )  # 7->14
-        self.block2: ResBlockUp = ResBlockUp(
-            64, 32, use_film=use_film, cond_dim=cond_dim
-        )  # 14->28
-        self.out_conv: nn.Conv2d = nn.Conv2d(
-            32, out_ch, kernel_size=1, stride=1, padding=0
-        )
+        self.block1: ResBlockUp = ResBlockUp(64, 64, use_film=use_film, cond_dim=cond_dim)  # 7->14
+        self.block2: ResBlockUp = ResBlockUp(64, 32, use_film=use_film, cond_dim=cond_dim)  # 14->28
+        self.out_conv: nn.Conv2d = nn.Conv2d(32, out_ch, kernel_size=1, stride=1, padding=0)
 
     def forward(self, z: Tensor, e: Tensor) -> Tensor:
         """

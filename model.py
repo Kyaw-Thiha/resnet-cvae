@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple, Optional, cast
+from typing import Tuple, Optional, Union, Dict, cast
 
 from lightning.pytorch.utilities.types import LRSchedulerConfig, OptimizerLRScheduler
 import torch
@@ -97,7 +97,7 @@ class CVAELightning(LightningModule):
         self.log("test/kl", kl)
 
     def on_fit_start(self) -> None:
-        # sync with Trainer in case YAML/CLI changed it
+        """Sync with Trainer so our LR schedule uses the true max_epochs (from YAML/CLI)."""
         if self.trainer.max_epochs:
             self._max_epochs = int(self.trainer.max_epochs)
 
@@ -105,9 +105,7 @@ class CVAELightning(LightningModule):
     # Optim / Sched
     # -----------------
     def configure_optimizers(self) -> OptimizerLRScheduler:
-        optimizer = optim.AdamW(
-            self.parameters(), lr=float(self.lr), weight_decay=float(self.weight_decay)
-        )
+        optimizer = optim.AdamW(self.parameters(), lr=float(self.lr), weight_decay=float(self.weight_decay))
 
         # Optional: cosine decay after warm-up portion of epochs
         def lr_lambda(epoch: int) -> float:
@@ -136,23 +134,80 @@ class CVAELightning(LightningModule):
     # -----------------
     def predict_step(
         self,
-        batch: Tensor | Tuple[Tensor, ...],
+        batch: Union[Tensor, Tuple[Tensor, ...], Dict[str, Tensor]],
         batch_idx: int,
         dataloader_idx: int = 0,
     ) -> Tensor:
         """
         Expects a batch of integer labels (B,) or one-hots (B, num_classes).
         Returns generated images in [-inf, +inf] (means of Gaussian). You can post-process outside.
+
+        Accepts either a Tensor of labels OR a dict with generation controls:
+        y: (B,) or (B,num_classes)
+        z: (B,z_dim) optional
+        temperature: float
+        guidance_scale: float
+        cond_scale: float
+        seed: int (optional)
         """
-        if isinstance(batch, tuple):
+        temperature: float = 1.0
+        guidance_scale: float = 0.0
+        cond_scale: float = 1.0
+        seed: Optional[int] = None
+        z: Optional[Tensor] = None
+
+        if isinstance(batch, dict):
+            y = batch["y"]
+            z = batch.get("z")
+            if "temperature" in batch:
+                temperature = float(batch["temperature"])  # type: ignore[arg-type]
+            if "guidance_scale" in batch:
+                guidance_scale = float(batch["guidance_scale"])  # type: ignore[arg-type]
+            if "cond_scale" in batch:
+                cond_scale = float(batch["cond_scale"])  # type: ignore[arg-type]
+            if "seed" in batch:
+                seed = int(batch["seed"])  # type: ignore[arg-type]
+        elif isinstance(batch, tuple):
             y = batch[0]
         else:
             y = batch
+
         b: int = y.shape[0]
-        return self.model.sample(n=b, y=y, device=self.device)
+        return self.model.sample(
+            n=b,
+            y=y,
+            device=self.device,
+            temperature=temperature,
+            seed=seed,
+            z=z,
+            guidance_scale=guidance_scale,
+            cond_scale=cond_scale,
+        )
 
     def sample(
-        self, n: int, y: Tensor, device: Optional[torch.device] = None
+        self,
+        n: int,
+        y: Tensor,
+        device: Optional[torch.device] = None,
+        *,
+        temperature: float = 1.0,
+        seed: Optional[int] = None,
+        z: Optional[Tensor] = None,
+        guidance_scale: float = 0.0,
+        cond_scale: float = 1.0,
     ) -> Tensor:
+        """
+        Thin, typed pass-through to the underlying model's controllable sampler.
+        Backward compatible: callback can keep calling sample(n, y, device).
+        """
         dev = self.device if device is None else device
-        return self.model.sample(n=n, y=y, device=dev)
+        return self.model.sample(
+            n=n,
+            y=y,
+            device=dev,
+            temperature=temperature,
+            seed=seed,
+            z=z,
+            guidance_scale=guidance_scale,
+            cond_scale=cond_scale,
+        )

@@ -40,7 +40,7 @@ python main.py test --config config/train.yaml
 
 ### 🔮 Predict
 ```bash
-python main.py predict --config config/train.yaml
+python main.py predict --config config/predict.yaml
 ```
 
 ### 🆘 For help text

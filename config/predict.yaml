@@ -29,10 +29,14 @@ data:
   val_split: 5000
   image_channels: 1         # keep in sync with model.{in,out}_channels
   num_classes: 10
-  predict_samples_per_class: 8
   pin_memory: true
   persistent_workers: true
-
+  
+  # Controlling the output
+  temperature: 0.6
+  guidance_scale: 1.5
+  cond_scale: 1.0
+  predict_samples_per_class: 8
 
 # ----------------------------
 # Trainer configuration

@@ -66,9 +66,7 @@ class ResNetCVAE(nn.Module):
         x_hat: Tensor = self.decoder(z, e)
         return x_hat, mu, logvar, z
 
-    def loss(
-        self, x: Tensor, y: Tensor, beta: float = 1.0
-    ) -> Tuple[Tensor, Tensor, Tensor]:
+    def loss(self, x: Tensor, y: Tensor, beta: float = 1.0) -> Tuple[Tensor, Tensor, Tensor]:
         """
         Returns:
             total_loss: scalar
@@ -84,9 +82,35 @@ class ResNetCVAE(nn.Module):
         total: Tensor = recon + beta * kl
         return total, recon, kl
 
+    def decode(self, z: Tensor, y: Tensor, cond_scale: float = 1.0) -> Tensor:
+        """Decode given latent z under label y. cond_scale scales label embedding strength.
+        Args:
+        z: (B, z_dim)
+        y: (B,) ints or (B,num_classes) one-hot
+        cond_scale: multiply class embedding by this factor (1.0 = normal)
+        Returns:
+        x_hat: (B, out_ch, H, W)
+        """
+        if y.dim() == 1:
+            num_classes: int = self.encoder.num_classes
+            y_onehot: Tensor = F.one_hot(y.to(torch.long), num_classes=num_classes).float().to(z.device)
+        else:
+            y_onehot = y.float().to(z.device)
+        e: Tensor = self.encoder.label_embed(y_onehot) * float(cond_scale)
+        return self.decoder(z, e)
+
     @torch.no_grad()
     def sample(
-        self, n: int, y: Tensor, device: Optional[torch.device] = None
+        self,
+        n: int,
+        y: Tensor,
+        device: Optional[torch.device] = None,
+        *,
+        temperature: float = 1.0,
+        seed: Optional[int] = None,
+        z: Optional[Tensor] = None,
+        guidance_scale: float = 0.0,
+        cond_scale: float = 1.0,
     ) -> Tensor:
         """
         Sample x ~ p(x|z,y) with z~N(0,I).
@@ -96,18 +120,37 @@ class ResNetCVAE(nn.Module):
             device: device override (defaults to model device)
         Returns:
             x_hat:  (n, out_ch, 28, 28)
-        """
-        dev: torch.device = device or next(self.parameters()).device
-        if y.dim() == 1:
-            num_classes: int = self.encoder.num_classes
-            y_onehot: Tensor = (
-                F.one_hot(y.to(torch.long), num_classes=num_classes).float().to(dev)
-            )
-        else:
-            y_onehot = y.float().to(dev)
 
-        e: Tensor = self.encoder.label_embed(y_onehot)
+        Controllable sampling from p(x|z,y).
+        - temperature: scales N(0,I) std for z (truncation when <1)
+        - seed: reproducible latent draw (ignored if `z` is provided)
+        - z: custom latent(s) of shape (n, z_dim) (bypasses sampling)
+        - guidance_scale: CFG-style mix in output space (0 disables)
+        - cond_scale: scales label embedding strength (1.0 normal, 0.0 ≈ unconditional)
+        """
+        dev = device or next(self.parameters()).device
+        if y.dim() == 1:
+            y = y.to(torch.long)
+        y = y.to(dev)
+
         z_dim: int = self.encoder.fc_mu.out_features
-        z: Tensor = torch.randn(n, z_dim, device=dev)
-        x_hat: Tensor = self.decoder(z, e)
-        return x_hat
+        if z is None:
+            if seed is not None:
+                g = torch.Generator(device=dev)
+                g.manual_seed(int(seed))
+                z = torch.randn(n, z_dim, generator=g, device=dev)
+            else:
+                z = torch.randn(n, z_dim, device=dev)
+            z = z * float(max(1e-6, temperature))  # temperature as latent std scaling
+        else:
+            assert z.shape == (n, z_dim), f"z must be shape (n,{z_dim})"
+            z = z.to(dev)
+
+        x_cond: Tensor = self.decode(z, y, cond_scale=cond_scale)
+        if guidance_scale <= 0.0:
+            return x_cond
+
+        # “Unconditional” path via zeroed conditioning (null label embedding)
+        x_uncond: Tensor = self.decode(z, y, cond_scale=0.0)
+        s: float = float(guidance_scale)
+        return x_cond + s * (x_cond - x_uncond)
