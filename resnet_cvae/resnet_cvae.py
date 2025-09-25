@@ -32,7 +32,6 @@ class ResNetCVAE(nn.Module):
         num_classes: int = 10,
         cond_dim: int = 16,
         use_film: bool = False,
-        sigma: float = 0.1,
     ) -> None:
         super().__init__()
         self.encoder: Encoder = Encoder(
@@ -48,7 +47,6 @@ class ResNetCVAE(nn.Module):
             cond_dim=cond_dim,
             use_film=use_film,
         )
-        self.sigma: float = float(sigma)  # fixed std for Gaussian likelihood
 
     def forward(self, x: Tensor, y: Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         """

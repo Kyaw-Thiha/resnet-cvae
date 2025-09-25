@@ -10,7 +10,6 @@ model:
   num_classes: 10
   cond_dim: 16
   use_film: false
-  sigma: 0.1
 
   # Optimization + loss schedule
   lr: 0.002                 # TODO: Update the learning rate based on learning rate finder

@@ -26,7 +26,6 @@ class CVAELightning(LightningModule):
         num_classes: int = 10,
         cond_dim: int = 16,
         use_film: bool = False,
-        sigma: float = 0.1,
         lr: float = 2e-3,
         weight_decay: float = 1e-4,
         beta: float = 1.0,
@@ -43,7 +42,6 @@ class CVAELightning(LightningModule):
             num_classes=num_classes,
             cond_dim=cond_dim,
             use_film=use_film,
-            sigma=sigma,
         )
 
         # Image Classes
