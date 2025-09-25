@@ -171,13 +171,14 @@ class CVAELightning(LightningModule):
             y = batch["y"]
             z = batch.get("z")
             if "temperature" in batch:
-                temperature = float(batch["temperature"])  # type: ignore[arg-type]
+                temperature = float(torch.as_tensor(batch.get("temperature", 1.0)).reshape(-1)[0])
             if "guidance_scale" in batch:
-                guidance_scale = float(batch["guidance_scale"])  # type: ignore[arg-type]
+                guidance_scale = float(torch.as_tensor(batch.get("guidance_scale", 0.0)).reshape(-1)[0])
             if "cond_scale" in batch:
-                cond_scale = float(batch["cond_scale"])  # type: ignore[arg-type]
+                cond_scale = float(torch.as_tensor(batch.get("cond_scale", 1.0)).reshape(-1)[0])
             if "seed" in batch:
-                seed = int(batch["seed"])  # type: ignore[arg-type]
+                seed = int(torch.as_tensor(batch["seed"]).reshape(-1)[0].item())
+                # seed = int(batch["seed"])  # type: ignore[arg-type]
         elif isinstance(batch, tuple):
             y = batch[0]
         else:

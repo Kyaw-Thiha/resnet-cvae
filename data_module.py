@@ -42,6 +42,7 @@ class MNISTDataModule(LightningDataModule):
         pin_memory: bool = True,
         persistent_workers: bool = True,
         # generation controls (used by predict dataloader)
+        predict_classes: Optional[list[int]] = None,
         temperature: float = 1.0,
         guidance_scale: float = 0.0,
         cond_scale: float = 1.0,
@@ -54,11 +55,12 @@ class MNISTDataModule(LightningDataModule):
         self.val_split = int(val_split)
         self.image_channels = int(image_channels)
         self.num_classes = int(num_classes)
-        self.predict_samples_per_class = int(predict_samples_per_class)
         self.pin_memory = bool(pin_memory)
         self.persistent_workers = bool(persistent_workers)
 
         # predict controls
+        self.predict_samples_per_class = int(predict_samples_per_class)
+        self.predict_classes = predict_classes
         self.temperature = float(temperature)
         self.guidance_scale = float(guidance_scale)
         self.cond_scale = float(cond_scale)
@@ -92,7 +94,7 @@ class MNISTDataModule(LightningDataModule):
                 image_channels=self.image_channels,
             )
         if stage in (None, "predict"):
-            self._predict = PredictLabelDataset(self.num_classes, self.predict_samples_per_class)
+            self._predict = PredictLabelDataset(self.num_classes, self.predict_samples_per_class, self.predict_classes)
 
     # Dataloaders
     def train_dataloader(self) -> DataLoader:

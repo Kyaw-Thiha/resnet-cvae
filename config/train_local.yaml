@@ -17,8 +17,8 @@ model:
   lr: 1.74e-04                 # TODO: Update the learning rate based on learning rate finder
   weight_decay: 0.0001
   beta: 1.0                 # final KL weight
-  kl_warmup_epochs: 10      # linear warmup from 0 -> beta
-  max_epochs: 50            # (used by the cosine LR helper)
+  kl_warmup_epochs: 60      # linear warmup from 0 -> beta
+  max_epochs: 300            # (used by the cosine LR helper)
 
 # ----------------------------
 # Data settings
@@ -41,7 +41,7 @@ trainer:
   default_root_dir: runs
   accelerator: auto
   devices: auto
-  max_epochs: 50
+  max_epochs: 300
   precision: 32-true
   log_every_n_steps: 50
   gradient_clip_val: 1.0
