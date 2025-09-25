@@ -3,6 +3,7 @@
 # ------------------------------
 
 from __future__ import annotations
+from typing import Tuple
 
 
 import torch
@@ -29,12 +30,21 @@ class Decoder(nn.Module):
         self.use_film: bool = use_film
         self.cond_dim: int = cond_dim
 
+        # Backbone
         self.fc: nn.Linear = nn.Linear(z_dim + cond_dim, 7 * 7 * 64)
         self.block1: ResBlockUp = ResBlockUp(64, 64, use_film=use_film, cond_dim=cond_dim)  # 7->14
         self.block2: ResBlockUp = ResBlockUp(64, 32, use_film=use_film, cond_dim=cond_dim)  # 14->28
-        self.out_conv: nn.Conv2d = nn.Conv2d(32, out_ch, kernel_size=1, stride=1, padding=0)
 
-    def forward(self, z: Tensor, e: Tensor) -> Tensor:
+        # Heads
+        # - Mean Head
+        # - LogSigma Head
+        self.head: nn.Conv2d = nn.Conv2d(32, out_ch, kernel_size=1, stride=1, padding=0)
+        self.head_sigma: nn.Conv2d = nn.Conv2d(32, out_ch, kernel_size=1)
+        if self.head_sigma.bias:
+            # better init for logsigma head (start around σ≈0.3 → logσ≈-1.2)
+            nn.init.constant_(self.head_sigma.bias, -1.2)
+
+    def forward(self, z: Tensor, e: Tensor) -> Tuple[Tensor, Tensor]:
         """
         Args:
             z: (B, z_dim)
@@ -46,5 +56,9 @@ class Decoder(nn.Module):
         h: Tensor = self.fc(zc).view(-1, 64, 7, 7)
         h = self.block1(h, e if self.use_film else None)
         h = self.block2(h, e if self.use_film else None)
-        x_hat: Tensor = self.out_conv(h)
-        return x_hat
+
+        # Heads
+        x_hat: Tensor = self.head(h)
+        sigma_map: Tensor = self.head_sigma(h)
+
+        return x_hat, sigma_map

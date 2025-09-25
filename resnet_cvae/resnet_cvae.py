@@ -50,7 +50,7 @@ class ResNetCVAE(nn.Module):
         )
         self.sigma: float = float(sigma)  # fixed std for Gaussian likelihood
 
-    def forward(self, x: Tensor, y: Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
+    def forward(self, x: Tensor, y: Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         """
         Args:
             x: (B, C, H, W)
@@ -63,8 +63,8 @@ class ResNetCVAE(nn.Module):
         """
         mu, logvar, e = self.encoder(x, y)
         z: Tensor = reparameterize(mu, logvar)
-        x_hat: Tensor = self.decoder(z, e)
-        return x_hat, mu, logvar, z
+        x_hat, sigma_map = self.decoder(z, e)
+        return x_hat, sigma_map, mu, logvar, z
 
     def loss(self, x: Tensor, y: Tensor, beta: float = 1.0) -> Tuple[Tensor, Tensor, Tensor]:
         """
@@ -73,16 +73,21 @@ class ResNetCVAE(nn.Module):
             recon:      scalar (mean over batch)
             kl:         scalar (mean over batch)
         """
-        x_hat, mu, logvar, _ = self.forward(x, y)
-        recon_vec: Tensor = gaussian_nll(x, x_hat, sigma=self.sigma)  # (B,)
+        x_hat, sigma_map, mu, logvar, _ = self.forward(x, y)
+        sigma_map: Tensor = sigma_map.exp().clamp(1e-3, 1)
+        recon_vec: Tensor = gaussian_nll(x, x_hat, sigma=sigma_map)  # (B,)
         kl_vec: Tensor = kl_normal(mu, logvar)  # (B,)
 
-        recon: Tensor = recon_vec.mean()
+        # Mild L2 on log σ to avoid extreme values
+        # tune 1e-5 ~ 1e-3
+        reg = 1e-4 * (sigma_map**2).mean()
+
+        recon: Tensor = recon_vec.mean() + reg
         kl: Tensor = kl_vec.mean()
         total: Tensor = recon + beta * kl
         return total, recon, kl
 
-    def decode(self, z: Tensor, y: Tensor, cond_scale: float = 1.0) -> Tensor:
+    def decode(self, z: Tensor, y: Tensor, cond_scale: float = 1.0) -> Tuple[Tensor, Tensor]:
         """
         Decode a latent code under a class label with adjustable conditioning strength.
 
@@ -169,11 +174,11 @@ class ResNetCVAE(nn.Module):
             assert z.shape == (n, z_dim), f"z must be shape (n,{z_dim})"
             z = z.to(dev)
 
-        x_cond: Tensor = self.decode(z, y, cond_scale=cond_scale)
+        x_cond, sigma = self.decode(z, y, cond_scale=cond_scale)
         if guidance_scale <= 0.0:
             return x_cond
 
         # “Unconditional” path via zeroed conditioning (null label embedding)
-        x_uncond: Tensor = self.decode(z, y, cond_scale=0.0)
+        x_uncond, sigma = self.decode(z, y, cond_scale=0.0)
         s: float = float(guidance_scale)
         return x_cond + s * (x_cond - x_uncond)

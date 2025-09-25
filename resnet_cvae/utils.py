@@ -4,6 +4,7 @@
 
 
 from __future__ import annotations
+import math
 
 import torch
 from torch import Tensor
@@ -36,16 +37,29 @@ def kl_normal(mu: Tensor, logvar: Tensor) -> Tensor:
     return kl
 
 
-def gaussian_nll(x: Tensor, mean: Tensor, sigma: float = 0.1) -> Tensor:
+def gaussian_nll(
+    x: Tensor,
+    mean: Tensor,
+    sigma: Tensor,
+) -> Tensor:
     """
-    Fixed-σ Gaussian negative log-likelihood (up to additive constant), per-sample.
-    Suitable when inputs are scaled to [-1, 1].
+    Heteroscedastic Gaussian negative log-likelihood per sample.
+
     Args:
         x:     (B, C, H, W)
         mean:  (B, C, H, W)
-        sigma: scalar std
+        sigma: broadcastable to (B, C, H, W); can be a scalar, (C,), (1,C,1,1), or (B,C,H,W)
+    Keyword Args:
+        clamp_min: lower bound for sigma to avoid div-by-zero
+        clamp_max: upper bound for sigma to avoid exploding variance early
+
     Returns:
-        nll:   (B,)
+        nll:   (B,)   # summed over pixels & channels, per sample
     """
-    diff: Tensor = (x - mean).view(x.size(0), -1)
-    return (diff.pow(2).sum(dim=1)) / (2.0 * (sigma**2))
+
+    # Full NLL: 0.5 * [ (x-μ)^2 / σ^2 + 2 log σ + log(2π) ]
+    # Summed over pixels/channels, yielding (B,)
+    var = sigma * sigma
+    sq = (x - mean) ** 2
+    nll = 0.5 * (sq / var + 2.0 * torch.log(sigma) + math.log(2.0 * math.pi))
+    return nll.flatten(1).sum(dim=1)
