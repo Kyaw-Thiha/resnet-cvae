@@ -41,6 +41,9 @@ class CVAECLI(LightningCLI):
         parser.add_argument("--run_lr_finder", type=bool, default=False, help="Whether to run learning rate finder")
 
     def before_fit(self):
+        """
+        Adding the batch size & learning rate finders
+        """
         tuner = Tuner(self.trainer)
 
         # ----------------------------------
@@ -93,7 +96,8 @@ class CVAECLI(LightningCLI):
         Adding in the logger & callbacks
         """
         cfg = self.config
-        run_dir = make_run_dir("fit", base=cfg.get("run", {}).get("base_dir", "runs"))
+        run_command = getattr(self, "subcommand", None)
+        run_dir = make_run_dir(str(run_command), base=cfg.get("run", {}).get("base_dir", "runs"))
         root = _active_group(cfg)
 
         trainer_dict = getattr(root, "trainer", {}) or {}
@@ -139,7 +143,7 @@ class CVAECLI(LightningCLI):
             {
                 "class_path": "callbacks.predict_save.SavePredictionsCallback",
                 "init_args": {
-                    "outdir": os.path.join(run_dir, "predict"),
+                    "out_dir": os.path.join(run_dir, "predict"),
                     "grid_nrow": 8,
                 },
             },
