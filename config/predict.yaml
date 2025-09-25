@@ -33,9 +33,9 @@ data:
   persistent_workers: true
   
   # Controlling the output
-  predict_classes: [1]
-  temperature: 0.6
-  guidance_scale: 1.5
+  predict_classes: [7]
+  temperature: 0.1
+  guidance_scale: 0
   cond_scale: 1.0
   predict_samples_per_class: 8
 
