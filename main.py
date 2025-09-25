@@ -89,6 +89,9 @@ class CVAECLI(LightningCLI):
             raise SystemExit(0)
 
     def before_instantiate_classes(self) -> None:
+        """
+        Adding in the logger & callbacks
+        """
         cfg = self.config
         run_dir = make_run_dir("fit", base=cfg.get("run", {}).get("base_dir", "runs"))
         root = _active_group(cfg)
@@ -100,6 +103,7 @@ class CVAECLI(LightningCLI):
             "init_args": {"save_dir": run_dir, "name": "logs", "default_hp_metric": False},
         }
         trainer_dict["callbacks"] = [
+            # Saving the best checkpoint
             {
                 "class_path": "lightning.pytorch.callbacks.ModelCheckpoint",
                 "init_args": {
@@ -110,6 +114,7 @@ class CVAECLI(LightningCLI):
                     "save_top_k": 1,
                 },
             },
+            # Saving checkpoints every 5 epochs
             {
                 "class_path": "lightning.pytorch.callbacks.ModelCheckpoint",
                 "init_args": {
@@ -120,13 +125,23 @@ class CVAECLI(LightningCLI):
                     "save_last": False,
                 },
             },
+            # Monitoring the learning rate
             {
                 "class_path": "lightning.pytorch.callbacks.LearningRateMonitor",
                 "init_args": {"logging_interval": "epoch"},
             },
+            # Sampling 8 images per validation
             {
                 "class_path": "callbacks.sample_images.SampleImages",
-                "init_args": {"num_per_class": 8},  # ✅ singular
+                "init_args": {"num_per_class": 8},
+            },
+            # Saving the outputs from prediction
+            {
+                "class_path": "callbacks.predict_save.SavePredictionsCallback",
+                "init_args": {
+                    "outdir": os.path.join(run_dir, "predict"),
+                    "grid_nrow": 8,
+                },
             },
         ]
         root.trainer = trainer_dict
