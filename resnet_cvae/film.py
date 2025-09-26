@@ -37,4 +37,4 @@ class FiLM(nn.Module):
         gamma, beta = gamma_beta.chunk(2, dim=1)  # (B,C), (B,C)
         gamma = gamma.view(b, c, 1, 1)
         beta = beta.view(b, c, 1, 1)
-        return gamma * x + beta
+        return (1.0 + gamma) * x + beta
