@@ -50,6 +50,7 @@ class SavePredictionsCallback(Callback):
         if not trainer.is_global_zero:
             return
         imgs = _to_01(torch.cat(self._imgs, dim=0))
+        imgs = (imgs.clamp(-1, 1) + 1) * 0.5
         ys = torch.cat(self._ys, dim=0)
 
         # per-sample
