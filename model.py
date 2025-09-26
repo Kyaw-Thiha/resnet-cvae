@@ -74,25 +74,40 @@ class CVAELightning(LightningModule):
     def training_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
         x, y = batch
         total, recon, kl = self.model.loss(x, y, beta=self._beta())
+        B, C, H, W = x.shape
+        pixel_count = C * H * W
+
         self.log("train/loss", total, prog_bar=True)
         self.log("train/recon", recon)
         self.log("train/kl", kl)
         self.log("train/beta", torch.tensor(self._beta()), prog_bar=True)
+        self.log("train/recon_per_pixel", recon / pixel_count, sync_dist=False)
+        self.log("train/kl_per_pixel", kl / pixel_count, sync_dist=False)
         return total
 
     def validation_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
         x, y = batch
-        total, recon, kl = self.model.loss(x, y, beta=float(self.beta))
+        total, recon, kl = self.model.loss(x, y, beta=float(self._beta()))
+        B, C, H, W = x.shape
+        pixel_count = C * H * W
+
         self.log("val/loss", total, prog_bar=True, sync_dist=False)
         self.log("val/recon", recon, sync_dist=False)
         self.log("val/kl", kl, sync_dist=False)
+        self.log("val/recon_per_pixel", recon / pixel_count, sync_dist=False)
+        self.log("val/kl_per_pixel", kl / pixel_count, sync_dist=False)
 
     def test_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
         x, y = batch
         total, recon, kl = self.model.loss(x, y, beta=float(self.beta))
+        B, C, H, W = x.shape
+        pixel_count = C * H * W
+
         self.log("test/loss", total, prog_bar=True)
         self.log("test/recon", recon)
         self.log("test/kl", kl)
+        self.log("test/recon_per_pixel", recon / pixel_count, sync_dist=False)
+        self.log("test/kl_per_pixel", kl / pixel_count, sync_dist=False)
 
     def on_fit_start(self) -> None:
         """Sync with Trainer so our LR schedule uses the true max_epochs (from YAML/CLI)."""
