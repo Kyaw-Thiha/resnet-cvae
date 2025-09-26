@@ -13,18 +13,18 @@ model:
   use_film: false
 
   # Optimization + loss schedule
-  lr: 1.74e-04                 # TODO: Update the learning rate based on learning rate finder
+  lr: 1e-3                 # TODO: Update the learning rate based on learning rate finder
   weight_decay: 0.0001
   beta: 0.8                 # final KL weight [0.5 ~ 1]
-  kl_warmup_epochs: 80      # linear warmup from 0 -> beta
-  max_epochs: 200            # (used by the cosine LR helper)
+  kl_warmup_epochs: 36      # linear warmup from 0 -> beta
+  max_epochs: 120            # (used by the cosine LR helper)
 
 # ----------------------------
 # Data settings
 # ----------------------------
 data:
   data_dir: ./data
-  batch_size: 1024          # TODO: Update the batch size based on batch size finder
+  batch_size: 512          # TODO: Update the batch size based on batch size finder
   num_workers: 8
   val_split: 5000
   image_channels: 1         # keep in sync with model.{in,out}_channels
@@ -40,7 +40,7 @@ trainer:
   default_root_dir: runs
   accelerator: auto
   devices: auto
-  max_epochs: 200
+  max_epochs: 120
   precision: 32-true
   log_every_n_steps: 50
   gradient_clip_val: 1.0
