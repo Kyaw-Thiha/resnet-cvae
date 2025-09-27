@@ -51,6 +51,9 @@ class Decoder(nn.Module):
             e: (B, cond_dim)
         Returns:
             x_hat: (B, out_ch, 28, 28)
+        Notes:
+            Use tanh for [-1, 1]
+            Use sigmoid for [0, 1]
         """
         zc: Tensor = torch.cat([z, e], dim=1)  # (B, z_dim + cond_dim)
         h: Tensor = self.fc(zc).view(-1, 64, 7, 7)
@@ -60,5 +63,6 @@ class Decoder(nn.Module):
         # Heads
         x_hat: Tensor = self.head(h)
         sigma_map: Tensor = self.head_sigma(h)
+        x_hat = torch.tanh(x_hat)
 
         return x_hat, sigma_map
