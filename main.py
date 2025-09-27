@@ -112,7 +112,7 @@ class CVAECLI(LightningCLI):
                 "class_path": "lightning.pytorch.callbacks.ModelCheckpoint",
                 "init_args": {
                     "dirpath": os.path.join(run_dir, "checkpoints", "best"),
-                    "filename": "e_{epoch+1}-l_{val/loss:.4f}",
+                    "filename": "e_{epoch}-l_{val_loss:.4f}",
                     "monitor": "val/loss",
                     "mode": "min",
                     "save_top_k": 1,
@@ -123,7 +123,7 @@ class CVAECLI(LightningCLI):
                 "class_path": "lightning.pytorch.callbacks.ModelCheckpoint",
                 "init_args": {
                     "dirpath": os.path.join(run_dir, "checkpoints", "interval"),
-                    "filename": "e_{epoch+1}",
+                    "filename": "e_{epoch}",
                     "every_n_epochs": 5,
                     "save_top_k": -1,
                     "save_last": False,

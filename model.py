@@ -91,7 +91,7 @@ class CVAELightning(LightningModule):
         B, C, H, W = x.shape
         pixel_count = C * H * W
 
-        self.log("val/loss", total, prog_bar=True, sync_dist=False)
+        self.log("val_loss", total, prog_bar=True, sync_dist=False)
         self.log("val/recon", recon, sync_dist=False)
         self.log("val/kl", kl, sync_dist=False)
         self.log("val/recon_per_pixel", recon / pixel_count, sync_dist=False)
