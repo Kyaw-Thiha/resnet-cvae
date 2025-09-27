@@ -72,7 +72,13 @@ class ResNetCVAE(nn.Module):
             kl:         scalar (mean over batch)
         """
         x_hat, log_sigma_map, mu, logvar, _ = self.forward(x, y)
-        sigma_map: Tensor = log_sigma_map.exp().clamp(1e-3, 1)
+
+        # if [0,1]:  logσ ∈ [-4.6, -0.7]  → σ ∈ [0.01, 0.5]
+        # if [-1,1]: logσ ∈ [-3.0,  0.5]  → σ ∈ [0.05, ~1.65]
+        log_sigma_map = log_sigma_map.clamp(min=-3.0, max=0.5)
+        sigma_map: Tensor = log_sigma_map.exp()
+
+        # sigma_map: Tensor = log_sigma_map.exp().clamp(1e-3, 1)
         recon_vec: Tensor = gaussian_nll(x, x_hat, sigma=sigma_map)  # (B,)
         kl_vec: Tensor = kl_normal(mu, logvar)  # (B,)
 
