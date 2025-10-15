@@ -9,6 +9,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from lightning.pytorch.core.module import LightningModule
 
+from models.baseline_cvae.baseline_cvae import BaselineCVAE
 from models.resnet_cvae.resnet_cvae import ResNetCVAE
 
 
@@ -35,13 +36,20 @@ class CVAELightning(LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.model: ResNetCVAE = ResNetCVAE(
+        # self.model: ResNetCVAE = ResNetCVAE(
+        #     in_ch=in_channels,
+        #     out_ch=out_channels,
+        #     z_dim=z_dim,
+        #     num_classes=num_classes,
+        #     cond_dim=cond_dim,
+        #     use_film=use_film,
+        # )
+        self.model: BaselineCVAE = BaselineCVAE(
             in_ch=in_channels,
             out_ch=out_channels,
             z_dim=z_dim,
             num_classes=num_classes,
             cond_dim=cond_dim,
-            use_film=use_film,
         )
 
         # Image Classes
