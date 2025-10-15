@@ -191,7 +191,17 @@ class CVAELightning(LightningModule):
                 cond_scale = float(torch.as_tensor(batch.get("cond_scale", 1.0)).reshape(-1)[0])
             if "seed" in batch:
                 seed = int(torch.as_tensor(batch["seed"]).reshape(-1)[0].item())
+                seed = int(seed) + int(batch_idx)
                 # seed = int(batch["seed"])  # type: ignore[arg-type]
+
+            if isinstance(y, torch.Tensor):
+                if y.dim() == 1:
+                    assert torch.all((0 <= y) & (y < self.num_classes)), f"labels out of range: {y.min()}..{y.max()}"
+                elif y.dim() == 2:
+                    assert y.shape[1] == self.num_classes, f"one-hot width {y.shape[1]} != num_classes {self.num_classes}"
+                else:
+                    raise ValueError(f"Unexpected y shape: {y.shape}")
+
         elif isinstance(batch, tuple):
             y = batch[0]
         else:

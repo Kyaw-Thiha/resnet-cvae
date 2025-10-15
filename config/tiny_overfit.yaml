@@ -6,6 +6,7 @@ model:
   kl_warmup_epochs: 0  # no warm-up
   lr: 2e-3             # learn fast for small data
   weight_decay: 1e-4
+  use_film: false
 
 data:
   batch_size: 64
@@ -15,7 +16,7 @@ data:
   persistent_workers: false
 
   # Controlling the output
-  predict_classes: [7]
+  predict_classes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
   temperature: 0
   guidance_scale: 0
   cond_scale: 1.0
@@ -24,6 +25,6 @@ data:
 trainer:
   max_epochs: 20
   log_every_n_steps: 1
-  # limit_val_batches: 0.0      # optional: skip val to focus on train
-  # limit_test_batches: 0.0
+  limit_val_batches: 0.0      # optional: skip val to focus on train
+  limit_test_batches: 0.0
   deterministic: true
