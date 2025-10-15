@@ -11,7 +11,7 @@ from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 
-from resnet_cvae.resblocks import ResBlockDown
+from models.resnet_cvae.resblocks import ResBlockDown
 
 
 class Encoder(nn.Module):
@@ -47,19 +47,11 @@ class Encoder(nn.Module):
         )
 
         # ResNet Down: 28->14->7
-        self.block1: ResBlockDown = ResBlockDown(
-            32, 32, downsample=True, use_film=use_film, cond_dim=cond_dim
-        )
-        self.block2: ResBlockDown = ResBlockDown(
-            32, 64, downsample=True, use_film=use_film, cond_dim=cond_dim
-        )
-        self.block3: ResBlockDown = ResBlockDown(
-            64, 64, downsample=False, use_film=use_film, cond_dim=cond_dim
-        )
+        self.block1: ResBlockDown = ResBlockDown(32, 32, downsample=True, use_film=use_film, cond_dim=cond_dim)
+        self.block2: ResBlockDown = ResBlockDown(32, 64, downsample=True, use_film=use_film, cond_dim=cond_dim)
+        self.block3: ResBlockDown = ResBlockDown(64, 64, downsample=False, use_film=use_film, cond_dim=cond_dim)
 
-        self.avgpool: nn.AdaptiveAvgPool2d = nn.AdaptiveAvgPool2d(
-            (1, 1)
-        )  # -> (B,64,1,1)
+        self.avgpool: nn.AdaptiveAvgPool2d = nn.AdaptiveAvgPool2d((1, 1))  # -> (B,64,1,1)
         self.fc_mu: nn.Linear = nn.Linear(64 + cond_dim, z_dim)
         self.fc_logvar: nn.Linear = nn.Linear(64 + cond_dim, z_dim)
 
@@ -74,9 +66,7 @@ class Encoder(nn.Module):
             e:      (B, cond_dim) class embedding
         """
         if y.dim() == 1:
-            y_onehot: Tensor = F.one_hot(
-                y.to(torch.long), num_classes=self.num_classes
-            ).float()
+            y_onehot: Tensor = F.one_hot(y.to(torch.long), num_classes=self.num_classes).float()
         else:
             y_onehot = y.float()
 

@@ -11,9 +11,9 @@ from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 
-from resnet_cvae.encoder import Encoder
-from resnet_cvae.decoder import Decoder
-from resnet_cvae.utils import reparameterize, gaussian_nll, kl_normal
+from models.resnet_cvae.encoder import Encoder
+from models.resnet_cvae.decoder import Decoder
+from models.utils import reparameterize, gaussian_nll, kl_normal
 
 
 class ResNetCVAE(nn.Module):

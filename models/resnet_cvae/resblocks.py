@@ -8,7 +8,7 @@ from typing import Optional
 
 from torch import Tensor
 import torch.nn as nn
-from resnet_cvae.film import FiLM
+from models.resnet_cvae.film import FiLM
 
 
 class ResBlockDown(nn.Module):
@@ -31,32 +31,22 @@ class ResBlockDown(nn.Module):
         super().__init__()
         stride: int = 2 if downsample else 1
 
-        self.conv1: nn.Conv2d = nn.Conv2d(
-            in_ch, out_ch, kernel_size=3, stride=stride, padding=1
-        )
+        self.conv1: nn.Conv2d = nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=stride, padding=1)
         self.gn1: nn.GroupNorm = nn.GroupNorm(norm_groups, out_ch)
-        self.conv2: nn.Conv2d = nn.Conv2d(
-            out_ch, out_ch, kernel_size=3, stride=1, padding=1
-        )
+        self.conv2: nn.Conv2d = nn.Conv2d(out_ch, out_ch, kernel_size=3, stride=1, padding=1)
         self.gn2: nn.GroupNorm = nn.GroupNorm(norm_groups, out_ch)
 
         self.skip: nn.Module
         if (in_ch != out_ch) or (stride == 2):
-            self.skip = nn.Conv2d(
-                in_ch, out_ch, kernel_size=1, stride=stride, padding=0
-            )
+            self.skip = nn.Conv2d(in_ch, out_ch, kernel_size=1, stride=stride, padding=0)
         else:
             self.skip = nn.Identity()
 
         self.act: nn.SiLU = nn.SiLU(inplace=True)
 
         self.use_film: bool = use_film
-        self.film1: Optional[FiLM] = (
-            FiLM(cond_dim, out_ch) if (use_film and cond_dim is not None) else None
-        )
-        self.film2: Optional[FiLM] = (
-            FiLM(cond_dim, out_ch) if (use_film and cond_dim is not None) else None
-        )
+        self.film1: Optional[FiLM] = FiLM(cond_dim, out_ch) if (use_film and cond_dim is not None) else None
+        self.film2: Optional[FiLM] = FiLM(cond_dim, out_ch) if (use_film and cond_dim is not None) else None
 
     def forward(self, x: Tensor, cond: Optional[Tensor] = None) -> Tensor:
         identity: Tensor = self.skip(x)
@@ -95,27 +85,17 @@ class ResBlockUp(nn.Module):
         super().__init__()
         self.up: nn.Upsample = nn.Upsample(scale_factor=2, mode="nearest")
 
-        self.conv1: nn.Conv2d = nn.Conv2d(
-            in_ch, out_ch, kernel_size=3, stride=1, padding=1
-        )
+        self.conv1: nn.Conv2d = nn.Conv2d(in_ch, out_ch, kernel_size=3, stride=1, padding=1)
         self.gn1: nn.GroupNorm = nn.GroupNorm(norm_groups, out_ch)
-        self.conv2: nn.Conv2d = nn.Conv2d(
-            out_ch, out_ch, kernel_size=3, stride=1, padding=1
-        )
+        self.conv2: nn.Conv2d = nn.Conv2d(out_ch, out_ch, kernel_size=3, stride=1, padding=1)
         self.gn2: nn.GroupNorm = nn.GroupNorm(norm_groups, out_ch)
 
-        self.skip: nn.Conv2d = nn.Conv2d(
-            in_ch, out_ch, kernel_size=1, stride=1, padding=0
-        )
+        self.skip: nn.Conv2d = nn.Conv2d(in_ch, out_ch, kernel_size=1, stride=1, padding=0)
         self.act: nn.SiLU = nn.SiLU(inplace=True)
 
         self.use_film: bool = use_film
-        self.film1: Optional[FiLM] = (
-            FiLM(cond_dim, out_ch) if (use_film and cond_dim is not None) else None
-        )
-        self.film2: Optional[FiLM] = (
-            FiLM(cond_dim, out_ch) if (use_film and cond_dim is not None) else None
-        )
+        self.film1: Optional[FiLM] = FiLM(cond_dim, out_ch) if (use_film and cond_dim is not None) else None
+        self.film2: Optional[FiLM] = FiLM(cond_dim, out_ch) if (use_film and cond_dim is not None) else None
 
     def forward(self, x: Tensor, cond: Optional[Tensor] = None) -> Tensor:
         identity: Tensor = self.up(x)

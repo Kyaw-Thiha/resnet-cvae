@@ -10,7 +10,7 @@ import torch
 from torch import Tensor
 import torch.nn as nn
 
-from resnet_cvae.resblocks import ResBlockUp
+from models.resnet_cvae.resblocks import ResBlockUp
 
 
 class Decoder(nn.Module):

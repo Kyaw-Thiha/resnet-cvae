@@ -9,7 +9,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from lightning.pytorch.core.module import LightningModule
 
-from resnet_cvae.resnet_cvae import ResNetCVAE
+from models.resnet_cvae.resnet_cvae import ResNetCVAE
 
 
 class CVAELightning(LightningModule):
