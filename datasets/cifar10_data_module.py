@@ -19,6 +19,7 @@ class CIFAR10DataModule(LightningDataModule):
         batch_size: int = 128,
         num_workers: int = 4,
         val_split: int = 5000,
+        image_channels: int = 3,
         num_classes: int = 10,
         predict_samples_per_class: int = 8,
         pin_memory: bool = True,

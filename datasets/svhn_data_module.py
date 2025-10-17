@@ -1,7 +1,6 @@
 from __future__ import annotations
-from typing import Optional, Any, Dict, Sequence
+from typing import Optional, Sequence
 
-import torch
 from torch.utils.data import DataLoader, random_split, ConcatDataset, Dataset
 from lightning.pytorch import LightningDataModule
 
@@ -20,6 +19,7 @@ class SVHNDataModule(LightningDataModule):
         batch_size: int = 128,
         num_workers: int = 4,
         val_split: int = 5000,
+        image_channels: int = 3,
         num_classes: int = 10,
         include_extra: bool = True,
         predict_samples_per_class: int = 8,

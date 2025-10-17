@@ -154,7 +154,7 @@ class CVAECLI(LightningCLI):
 
 
 def cli_main() -> None:
-    CVAECLI(model_class=CVAELightning, datamodule_class=MNISTDataModule)
+    CVAECLI(model_class=CVAELightning, datamodule_class=SVHNDataModule)
 
 
 if __name__ == "__main__":
