@@ -197,10 +197,9 @@ class CVAELightning(LightningModule):
                 guidance_scale = float(torch.as_tensor(batch.get("guidance_scale", 0.0)).reshape(-1)[0])
             if "cond_scale" in batch:
                 cond_scale = float(torch.as_tensor(batch.get("cond_scale", 1.0)).reshape(-1)[0])
-            if "seed" in batch:
-                seed = int(torch.as_tensor(batch["seed"]).reshape(-1)[0].item())
-                seed = int(seed) + int(batch_idx)
-                # seed = int(batch["seed"])  # type: ignore[arg-type]
+            # if "seed" in batch:
+            #     seed = int(torch.as_tensor(batch["seed"]).reshape(-1)[0].item())
+            #     seed = int(seed) + int(batch_idx)
 
             if isinstance(y, torch.Tensor):
                 if y.dim() == 1:
