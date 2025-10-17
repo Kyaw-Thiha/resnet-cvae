@@ -1,5 +1,5 @@
 # Seed everything (LightningCLI handles this when set here)
-seed_everything: 42
+# seed_everything: 42
 
 # ----------------------------
 # Model hyperparameters
@@ -7,17 +7,17 @@ seed_everything: 42
 model:
   in_channels: 1            # set to 3 for RGB datasets later
   out_channels: 1
-  z_dim: 16
+  z_dim: 32
   num_classes: 10
   cond_dim: 16
   use_film: false
 
   # Optimization + loss schedule
-  lr: 1.0e-3
-  weight_decay: 0.0
-  beta: 1.0
-  kl_warmup_epochs: 10
-  max_epochs: 50
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  beta: 0.25
+  kl_warmup_epochs: 50
+  max_epochs: 100
 
 # ----------------------------
 # Data settings
@@ -40,7 +40,7 @@ trainer:
   default_root_dir: runs
   accelerator: auto
   devices: auto
-  max_epochs: 50
+  max_epochs: 100
   precision: 32-true
   log_every_n_steps: 50
   gradient_clip_val: 1.0

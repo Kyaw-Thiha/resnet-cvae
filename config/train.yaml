@@ -6,7 +6,7 @@ seed_everything: 42
 model:
   in_channels: 1            # set to 3 for RGB datasets later
   out_channels: 1
-  z_dim: 16
+  z_dim: 32
   num_classes: 10
   cond_dim: 16
   use_film: false
