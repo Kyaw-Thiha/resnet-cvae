@@ -51,7 +51,7 @@ class SampleImages(Callback):
         device = pl_module.device
         labels = torch.arange(int(num_classes), device=device).repeat_interleave(self.num_per_class)
         imgs: Tensor = sample_fn(
-            n=labels.numel(), y=labels, device=device, temperature=0.8, guidance_scale=0.2, cond_scale=0.8
+            n=labels.numel(), y=labels, device=device, temperature=1.0, guidance_scale=0, cond_scale=1.0
         )  # (N,C,H,W)
         imgs = (imgs.clamp(-1, 1) + 1.0) / 2.0  # [-1,1] -> [0,1]
 
