@@ -54,7 +54,7 @@ def gaussian_nll(
         clamp_max: upper bound for sigma to avoid exploding variance early
 
     Returns:
-        nll:   (B,)   # summed over pixels & channels, per sample
+        nll:   (B,)   # mean over all pixels & channels, per sample
     """
 
     # Full NLL: 0.5 * [ (x-μ)^2 / σ^2 + 2 log σ + log(2π) ]
@@ -62,4 +62,4 @@ def gaussian_nll(
     var = sigma * sigma
     sq = (x - mean) ** 2
     nll = 0.5 * (sq / var + 2.0 * torch.log(sigma) + math.log(2.0 * math.pi))
-    return nll.flatten(1).sum(dim=1)
+    return nll.flatten(1).mean(dim=1)

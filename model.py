@@ -216,7 +216,7 @@ class CVAELightning(LightningModule):
             y = batch
 
         b: int = y.shape[0]
-        return self.model.sample(
+        return self.sample(
             n=b,
             y=y,
             device=self.device,

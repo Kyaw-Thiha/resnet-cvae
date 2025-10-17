@@ -113,7 +113,7 @@ class CVAECLI(LightningCLI):
                 "init_args": {
                     "dirpath": os.path.join(run_dir, "checkpoints", "best"),
                     "filename": "e_{epoch}-l_{val_loss:.4f}",
-                    "monitor": "val/loss",
+                    "monitor": "val_loss",
                     "mode": "min",
                     "save_top_k": 1,
                 },
