@@ -4,11 +4,8 @@ from typing import Optional
 from lightning.pytorch import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
-from dataset import MNISTDataset, PredictLabelDataset
-
-from torch.utils.data import Dataset
-import torch
-from typing import Any, Dict
+from datasets.mnist_dataset import MNISTDataset
+from datasets.predict_dataset import PredictLabelDataset, PredictWrapper
 
 
 class MNISTDataModule(LightningDataModule):
@@ -146,33 +143,13 @@ class MNISTDataModule(LightningDataModule):
 
         assert self._predict is not None
 
-        class _GenWrapper(Dataset):  # type: ignore[misc]
-            def __init__(self, base: PredictLabelDataset, cfg: Dict[str, Any]) -> None:
-                self.base = base
-                self.cfg = cfg
-
-            def __len__(self) -> int:
-                return len(self.base)
-
-            def __getitem__(self, idx: int):
-                y = self.base[idx]
-                out: Dict[str, Any] = {
-                    "y": y,
-                    "temperature": torch.tensor(self.cfg["temperature"]),
-                    "guidance_scale": torch.tensor(self.cfg["guidance_scale"]),
-                    "cond_scale": torch.tensor(self.cfg["cond_scale"]),
-                }
-                if self.cfg.get("seed") is not None:
-                    out["seed"] = torch.tensor(self.cfg["seed"])
-                return out
-
         cfg = {
             "temperature": self.temperature,
             "guidance_scale": self.guidance_scale,
             "cond_scale": self.cond_scale,
             "seed": self.seed,
         }
-        wrapped = _GenWrapper(self._predict, cfg)
+        wrapped = PredictWrapper(self._predict, cfg)
         return DataLoader(
             wrapped,
             batch_size=self.batch_size,

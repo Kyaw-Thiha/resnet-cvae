@@ -8,7 +8,9 @@ from lightning.pytorch.cli import LightningCLI
 from lightning.pytorch.tuner.tuning import Tuner
 
 from model import CVAELightning
-from data_module import MNISTDataModule
+from datasets.mnist_data_module import MNISTDataModule
+from datasets.svhn_data_module import SVHNDataModule
+from datasets.cifar10_data_module import CIFAR10DataModule
 
 from utils.batch_size_finder import run_bs_finder_ephemeral
 from utils.learning_rate_finder import run_lr_finder_ephemeral
