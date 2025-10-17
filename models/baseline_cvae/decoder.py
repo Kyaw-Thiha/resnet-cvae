@@ -29,13 +29,15 @@ class Decoder(nn.Module):
 
         flat_out = out_ch * self.H * self.W
 
-        self.mlp = nn.Sequential(
+        self.layer_1 = nn.Sequential(
             nn.Linear(z_dim + cond_dim, hidden),
             nn.ReLU(inplace=True),
-            nn.Linear(hidden, hidden),
-            nn.ReLU(inplace=True),
-            nn.Linear(hidden, flat_out),
         )
+        self.layer_2 = nn.Sequential(
+            nn.Linear(hidden + z_dim, hidden),
+            nn.ReLU(inplace=True),
+        )
+        self.layer_3 = nn.Linear(hidden, flat_out)
 
         # Global noise scale (stable baseline)
         self.log_sigma = nn.Parameter(torch.tensor(float(init_log_sigma)))
@@ -49,7 +51,10 @@ class Decoder(nn.Module):
             x_hat:         (B, out_ch, H, W)
             log_sigma_map: (B, out_ch, H, W)  # broadcast of scalar log_sigma
         """
-        h = self.mlp(torch.cat([z, e], dim=1))
+        h = self.layer_1(torch.cat([z, e], dim=1))
+        h = self.layer_2(torch.cat([h, z], dim=1))
+        h = self.layer_3(h)
+
         B = z.size(0)
         x_hat = h.view(B, self.out_ch, self.H, self.W)
         log_sigma_map = self.log_sigma.expand_as(x_hat)

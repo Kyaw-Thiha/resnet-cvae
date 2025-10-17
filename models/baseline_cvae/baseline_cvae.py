@@ -2,6 +2,7 @@
 # Simple, self-contained class-conditional VAE (MLP baseline)
 # ------------------------------
 from __future__ import annotations
+import math
 
 from typing import Tuple, Optional
 import torch
@@ -65,7 +66,7 @@ class BaselineCVAE(nn.Module):
         x_hat, log_sigma_map, mu, logvar, _ = self.forward(x, y)
 
         # Keep σ in a sane range
-        log_sigma_clamped = log_sigma_map.clamp(min=-3.0, max=0.5)
+        log_sigma_clamped = log_sigma_map.clamp(min=math.log(0.05), max=math.log(0.7))
         sigma = log_sigma_clamped.exp()
 
         recon_vec = gaussian_nll(x, x_hat, sigma=sigma)  # (B,)
