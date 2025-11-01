@@ -10,6 +10,10 @@ from torchvision import transforms as T
 
 _SCALE = T.Lambda(lambda x: x * 2.0 - 1.0)  # [0,1] -> [-1,1]
 
+_TRAIN_TF = T.Compose([T.RandomCrop(32, padding=4), T.RandomHorizontalFlip(), T.ToTensor(), T.Lambda(lambda x: x * 2.0 - 1.0)])
+
+_TEST_TF = T.Compose([T.ToTensor(), T.Lambda(lambda x: x * 2.0 - 1.0)])
+
 
 class CIFAR10Dataset(Dataset[Tuple[Tensor, Tensor]]):
     """
@@ -19,7 +23,8 @@ class CIFAR10Dataset(Dataset[Tuple[Tensor, Tensor]]):
     def __init__(self, root: str, train: bool, download: bool = True) -> None:
         super().__init__()
         self.ds = CIFAR10(root=root, train=train, download=download)
-        self.transform = T.Compose([T.ToTensor(), _SCALE])
+        # self.transform = T.Compose([T.ToTensor(), _SCALE])
+        self.transform = _TRAIN_TF if train else _TEST_TF
 
     def __len__(self) -> int:
         return len(self.ds)
