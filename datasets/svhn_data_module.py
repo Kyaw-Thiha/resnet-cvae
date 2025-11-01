@@ -48,6 +48,7 @@ class SVHNDataModule(LightningDataModule):
         self.guidance_scale = guidance_scale
         self.cond_scale = cond_scale
         self.seed = seed
+        self._train_size: Optional[int] = None
 
         self._train = None
         self._val = None
@@ -70,6 +71,7 @@ class SVHNDataModule(LightningDataModule):
                 full_train = core
             train_len = len(full_train) - self.val_split
             self._train, self._val = random_split(full_train, [train_len, self.val_split])
+            self._train_size = int(train_len)
 
         if stage in (None, "test"):
             self._test = SVHNDataset(self.data_dir, split="test", download=False)
@@ -131,3 +133,14 @@ class SVHNDataModule(LightningDataModule):
             pin_memory=self.pin_memory,
             persistent_workers=self.persistent_workers,
         )
+
+    @property
+    def train_dataset_size(self) -> Optional[int]:
+        if self._train_size is not None:
+            return self._train_size
+        if self._train is not None:
+            try:
+                return int(len(self._train))
+            except TypeError:
+                return None
+        return None

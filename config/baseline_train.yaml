@@ -18,6 +18,8 @@ model:
   beta: 0.25
   kl_warmup_epochs: 50
   max_epochs: 100
+  loss:
+    name: standard
 
 # ----------------------------
 # Data settings
@@ -47,4 +49,3 @@ trainer:
   deterministic: false
   enable_checkpointing: true
   default_root_dir: ./runs
-

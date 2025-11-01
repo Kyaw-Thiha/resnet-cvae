@@ -46,6 +46,7 @@ class CIFAR10DataModule(LightningDataModule):
         self.guidance_scale = guidance_scale
         self.cond_scale = cond_scale
         self.seed = seed
+        self._train_size: Optional[int] = None
 
         self._train = None
         self._val = None
@@ -61,6 +62,7 @@ class CIFAR10DataModule(LightningDataModule):
             full_train = CIFAR10Dataset(self.data_dir, train=True, download=False)
             train_len = len(full_train) - self.val_split
             self._train, self._val = random_split(full_train, [train_len, self.val_split])
+            self._train_size = int(train_len)
 
         if stage in (None, "test"):
             self._test = CIFAR10Dataset(self.data_dir, train=False, download=False)
@@ -122,3 +124,14 @@ class CIFAR10DataModule(LightningDataModule):
             pin_memory=self.pin_memory,
             persistent_workers=self.persistent_workers,
         )
+
+    @property
+    def train_dataset_size(self) -> Optional[int]:
+        if self._train_size is not None:
+            return self._train_size
+        if self._train is not None:
+            try:
+                return int(len(self._train))
+            except TypeError:
+                return None
+        return None

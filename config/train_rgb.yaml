@@ -18,6 +18,8 @@ model:
   beta: 0.25                # final KL weight [0.5 ~ 1]
   kl_warmup_epochs: 40      # linear warmup from 0 -> beta
   max_epochs: 80            # (used by the cosine LR helper)
+  loss:
+    name: standard
 
 # ----------------------------
 # Data settings
@@ -47,4 +49,3 @@ trainer:
   deterministic: false
   enable_checkpointing: true
   default_root_dir: ./runs
-

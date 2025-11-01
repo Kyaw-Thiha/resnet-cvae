@@ -2,7 +2,6 @@
 # Simple, self-contained class-conditional VAE (MLP baseline)
 # ------------------------------
 from __future__ import annotations
-import math
 
 from typing import Tuple, Optional
 import torch
@@ -11,7 +10,7 @@ import torch.nn as nn
 
 from models.baseline_cvae.encoder import Encoder
 from models.baseline_cvae.decoder import Decoder
-from models.utils import reparameterize, gaussian_nll, kl_normal
+from models.utils import reparameterize
 
 
 class BaselineCVAE(nn.Module):
@@ -20,7 +19,6 @@ class BaselineCVAE(nn.Module):
 
     API:
       - forward(x,y) -> x_hat, log_sigma_map, mu, logvar, z
-      - loss(x,y,beta) -> total, recon, kl
       - decode(z,y,cond_scale) -> x_hat, log_sigma_map
       - sample(n,y,device,temperature,seed,z,guidance_scale,cond_scale) -> x_hat
     """
@@ -61,22 +59,6 @@ class BaselineCVAE(nn.Module):
         z = reparameterize(mu, logvar)
         x_hat, log_sigma_map = self.decoder(z, e)
         return x_hat, log_sigma_map, mu, logvar, z
-
-    def loss(self, x: Tensor, y: Tensor, beta: float = 1.0):
-        x_hat, log_sigma_map, mu, logvar, _ = self.forward(x, y)
-
-        # Keep σ in a sane range
-        log_sigma_clamped = log_sigma_map.clamp(min=math.log(0.05), max=math.log(0.7))
-        sigma = log_sigma_clamped.exp()
-
-        recon_vec = gaussian_nll(x, x_hat, sigma=sigma)  # (B,)
-        kl_vec = kl_normal(mu, logvar)  # (B,)
-
-        reg = 1e-5 * (log_sigma_clamped**2).mean()  # tiny L2 on logσ
-        recon = recon_vec.mean() + reg
-        kl = kl_vec.mean()
-        total = recon + beta * kl
-        return total, recon, kl
 
     def decode(self, z: Tensor, y: Tensor, cond_scale: float = 1.0):
         """

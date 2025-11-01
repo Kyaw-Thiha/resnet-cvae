@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple, Optional, Union, Dict, cast
+from typing import Any, Dict, Mapping, Optional, Tuple, Union, cast
 
 from lightning.pytorch.utilities.types import LRSchedulerConfig, OptimizerLRScheduler
 import torch
@@ -9,8 +9,8 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import LambdaLR
 from lightning.pytorch.core.module import LightningModule
 
-from models.baseline_cvae.baseline_cvae import BaselineCVAE
 from models.resnet_cvae.resnet_cvae import ResNetCVAE
+from models.losses import BaseLossModule, LossContext, LossInputs, LossOutput, build_loss_module
 
 
 class CVAELightning(LightningModule):
@@ -32,6 +32,7 @@ class CVAELightning(LightningModule):
         beta: float = 1.0,
         kl_warmup_epochs: int = 10,
         max_epochs: int = 50,
+        loss: Optional[Mapping[str, Any]] = None,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
@@ -63,8 +64,10 @@ class CVAELightning(LightningModule):
 
         # Will be set by the trainer; used in KL warm-up schedule
         self._max_epochs: int = max_epochs
+        self.loss_module: BaseLossModule = build_loss_module(loss)
+        self._cached_dataset_size: Optional[int] = None
 
-    def forward(self, x: Tensor, y: Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
+    def forward(self, x: Tensor, y: Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         return self.model(x, y)
 
     # -----------------
@@ -79,48 +82,110 @@ class CVAELightning(LightningModule):
             return target
         return float(min(1.0, (current_epoch + 1) / warm) * target)
 
+    def build_loss_inputs(self, x: Tensor, y: Tensor) -> LossInputs:
+        x_hat, log_sigma, mu, logvar, z = self.model(x, y)
+        return LossInputs(
+            x=x,
+            x_hat=x_hat,
+            log_sigma=log_sigma,
+            mu=mu,
+            logvar=logvar,
+            z=z,
+        )
+
+    def build_loss_context(self, beta_value: float) -> LossContext:
+        step = int(getattr(self, "global_step", 0))
+        return LossContext(beta=float(beta_value), epoch=int(self.current_epoch), global_step=step)
+
+    def _compute_loss(self, x: Tensor, y: Tensor, beta_value: float) -> LossOutput:
+        inputs = self.build_loss_inputs(x, y)
+        context = self.build_loss_context(beta_value)
+        return self.loss_module(inputs, context)
+
     def training_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> Tensor:
         x, y = batch
-        total, recon, kl = self.model.loss(x, y, beta=self._beta())
+        beta_value = self._beta()
+        loss_output = self._compute_loss(x, y, beta_value)
         B, C, H, W = x.shape
         pixel_count = C * H * W
 
-        self.log("train/loss", total, prog_bar=True)
-        self.log("train/recon", recon)
-        self.log("train/kl", kl)
-        self.log("train/beta", torch.tensor(self._beta()), prog_bar=True)
-        self.log("train/recon_per_pixel", recon / pixel_count, sync_dist=False)
-        self.log("train/kl_per_pixel", kl / pixel_count, sync_dist=False)
-        return total
+        self.log("train/loss", loss_output.total, prog_bar=True)
+        self.log("train/recon", loss_output.reconstruction)
+        self.log("train/kl", loss_output.kl)
+        self.log("train/recon_per_pixel", loss_output.reconstruction / pixel_count, sync_dist=False)
+        self.log("train/kl_per_pixel", loss_output.kl / pixel_count, sync_dist=False)
+
+        for key, value in loss_output.metrics.items():
+            prog_bar = key == "beta"
+            self.log(f"train/{key}", value, prog_bar=prog_bar, sync_dist=False)
+
+        return loss_output.total
 
     def validation_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
         x, y = batch
-        total, recon, kl = self.model.loss(x, y, beta=float(self._beta()))
+        loss_output = self._compute_loss(x, y, beta_value=float(self._beta()))
         B, C, H, W = x.shape
         pixel_count = C * H * W
 
-        self.log("val_loss", total, prog_bar=True, sync_dist=False)
-        self.log("val/recon", recon, sync_dist=False)
-        self.log("val/kl", kl, sync_dist=False)
-        self.log("val/recon_per_pixel", recon / pixel_count, sync_dist=False)
-        self.log("val/kl_per_pixel", kl / pixel_count, sync_dist=False)
+        self.log("val_loss", loss_output.total, prog_bar=True, sync_dist=False)
+        self.log("val/recon", loss_output.reconstruction, sync_dist=False)
+        self.log("val/kl", loss_output.kl, sync_dist=False)
+        self.log("val/recon_per_pixel", loss_output.reconstruction / pixel_count, sync_dist=False)
+        self.log("val/kl_per_pixel", loss_output.kl / pixel_count, sync_dist=False)
+
+        for key, value in loss_output.metrics.items():
+            self.log(f"val/{key}", value, sync_dist=False)
 
     def test_step(self, batch: Tuple[Tensor, Tensor], batch_idx: int) -> None:
         x, y = batch
-        total, recon, kl = self.model.loss(x, y, beta=float(self.beta))
+        loss_output = self._compute_loss(x, y, beta_value=float(self.beta))
         B, C, H, W = x.shape
         pixel_count = C * H * W
 
-        self.log("test/loss", total, prog_bar=True)
-        self.log("test/recon", recon)
-        self.log("test/kl", kl)
-        self.log("test/recon_per_pixel", recon / pixel_count, sync_dist=False)
-        self.log("test/kl_per_pixel", kl / pixel_count, sync_dist=False)
+        self.log("test/loss", loss_output.total, prog_bar=True)
+        self.log("test/recon", loss_output.reconstruction)
+        self.log("test/kl", loss_output.kl)
+        self.log("test/recon_per_pixel", loss_output.reconstruction / pixel_count, sync_dist=False)
+        self.log("test/kl_per_pixel", loss_output.kl / pixel_count, sync_dist=False)
+
+        for key, value in loss_output.metrics.items():
+            self.log(f"test/{key}", value)
 
     def on_fit_start(self) -> None:
         """Sync with Trainer so our LR schedule uses the true max_epochs (from YAML/CLI)."""
         if self.trainer.max_epochs:
             self._max_epochs = int(self.trainer.max_epochs)
+        if self.loss_module.requires_dataset_size():
+            dataset_size = self._infer_dataset_size()
+            if dataset_size is None:
+                raise RuntimeError(
+                    "Loss module requires the training dataset size, but it could not be determined. "
+                    "Expose `train_dataset_size` on the DataModule or override `_infer_dataset_size`."
+                )
+            self.loss_module.set_dataset_size(dataset_size)
+
+    def _infer_dataset_size(self) -> Optional[int]:
+        if self._cached_dataset_size is not None:
+            return self._cached_dataset_size
+
+        datamodule = getattr(self.trainer, "datamodule", None)
+        dataset_size: Optional[int] = None
+
+        if datamodule is not None:
+            candidate = getattr(datamodule, "train_dataset_size", None)
+            if candidate is not None:
+                dataset_size = int(candidate)
+            else:
+                try:
+                    train_loader = datamodule.train_dataloader()
+                    dataset = getattr(train_loader, "dataset", None)
+                    if dataset is not None:
+                        dataset_size = int(len(dataset))
+                except Exception:
+                    dataset_size = None
+
+        self._cached_dataset_size = dataset_size
+        return dataset_size
 
     # -----------------
     # Optim / Sched

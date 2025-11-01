@@ -27,6 +27,12 @@ python main.py fit --config config/train.yaml --run_batch_size_finder true --bat
 python main.py fit --config config/train.yaml --run_lr_finder true 
 ```
 
+## Loss Variants
+- `model.loss.name: standard` retains the original β-VAE objective (default in existing configs).
+- `model.loss.name: beta_tc` enables the β-TCVAE decomposition with configurable weights (`config/train_beta_tc.yaml` demonstrates a starting point).
+
+Warm-up continues to use `model.beta`, so scheduling the KL/TC weight only requires updating that scalar in your config.
+
 ## Running the Model
 ### ✅ Validation
 ```bash
@@ -126,4 +132,3 @@ Defaults / Hyperparams:
   • Optim: AdamW (lr=2e-3, wd=1e-4)      • Grad clip: 1.0
   • Batch: 128                           • Epochs: 50–100 (MNIST)
 ```
-

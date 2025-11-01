@@ -13,7 +13,7 @@ import torch.nn.functional as F
 
 from models.resnet_cvae.encoder import Encoder
 from models.resnet_cvae.decoder import Decoder
-from models.utils import reparameterize, gaussian_nll, kl_normal
+from models.utils import reparameterize
 
 
 class ResNetCVAE(nn.Module):
@@ -63,33 +63,6 @@ class ResNetCVAE(nn.Module):
         z: Tensor = reparameterize(mu, logvar)
         x_hat, sigma_map = self.decoder(z, e)
         return x_hat, sigma_map, mu, logvar, z
-
-    def loss(self, x: Tensor, y: Tensor, beta: float = 1.0) -> Tuple[Tensor, Tensor, Tensor]:
-        """
-        Returns:
-            total_loss: scalar
-            recon:      scalar (mean over batch)
-            kl:         scalar (mean over batch)
-        """
-        x_hat, log_sigma_map, mu, logvar, _ = self.forward(x, y)
-
-        # if [0,1]:  logσ ∈ [-4.6, -0.7]  → σ ∈ [0.01, 0.5]
-        # if [-1,1]: logσ ∈ [-3.0,  0.5]  → σ ∈ [0.05, ~1.65]
-        log_sigma_map = log_sigma_map.clamp(min=-3.0, max=0.5)
-        sigma_map: Tensor = log_sigma_map.exp()
-
-        # sigma_map: Tensor = log_sigma_map.exp().clamp(1e-3, 1)
-        recon_vec: Tensor = gaussian_nll(x, x_hat, sigma=sigma_map)  # (B,)
-        kl_vec: Tensor = kl_normal(mu, logvar)  # (B,)
-
-        # Mild L2 on log σ to avoid extreme values
-        # tune 1e-5 ~ 1e-3
-        reg = 1e-4 * (log_sigma_map**2).mean()
-
-        recon: Tensor = recon_vec.mean() + reg
-        kl: Tensor = kl_vec.mean()
-        total: Tensor = recon + beta * kl
-        return total, recon, kl
 
     def decode(self, z: Tensor, y: Tensor, cond_scale: float = 1.0) -> Tuple[Tensor, Tensor]:
         """
